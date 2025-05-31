@@ -1,3 +1,253 @@
-export function hello(): string {
-  return 'Hello from vscode-search!';
-} 
+import { SearchOptions, FileSearchResult, SearchStats, ReplaceOptions, SearchMatch } from './types';
+import * as nodefs from 'fs';
+import fg from 'fast-glob';
+import ignore from 'ignore';
+import * as path from 'path';
+
+export class SearchEngine {
+  private fs: FileSystem;
+  private activeSearchAbortController: AbortController | null = null;
+  private lastSearchPattern: string | null = null;
+  private lastSearchOptions: SearchOptions | null = null;
+  private replaceBackup: Map<string, string> = new Map();
+
+  constructor(fs: FileSystem) {
+    this.fs = fs;
+  }
+
+  /**
+   * 执行搜索操作
+   * @param searchPattern 搜索文本或正则表达式
+   * @param rootPath 搜索根目录
+   * @param options 搜索选项
+   * @param onProgress 进度回调
+   */
+  public async search(
+    searchPattern: string,
+    rootPath: string,
+    options: SearchOptions,
+    onProgress?: (stats: SearchStats) => void
+  ): Promise<FileSearchResult[]> {
+    this.lastSearchPattern = searchPattern;
+    this.lastSearchOptions = options;
+    // 初始化中断控制器
+    this.activeSearchAbortController = new AbortController();
+    const signal = this.activeSearchAbortController.signal;
+    return this.executeSearch(searchPattern, rootPath, options, onProgress, signal);
+  }
+
+  /**
+   * 中断当前搜索
+   */
+  public cancelSearch(): void {
+    this.activeSearchAbortController?.abort();
+  }
+
+  private async executeSearch(
+    searchPattern: string,
+    rootPath: string,
+    options: SearchOptions,
+    onProgress?: (stats: SearchStats) => void,
+    signal?: AbortSignal
+  ): Promise<FileSearchResult[]> {
+    const startTime = Date.now();
+    // 构造匹配正则
+    const regex = this.buildRegex(searchPattern, options);
+    // 收集文件列表
+    const files = await this.gatherFiles(rootPath, options);
+    const results: FileSearchResult[] = [];
+    let totalMatches = 0;
+
+    for (const file of files) {
+      if (signal?.aborted) break;
+      const matches = await this.matchInFile(file, regex, options);
+      if (matches.length > 0) {
+        totalMatches += matches.length;
+        results.push({ filePath: file, matches });
+      }
+      // 达到最大结果数则停止
+      if (options.maxResults && totalMatches >= options.maxResults) {
+        break;
+      }
+      // 进度回调
+      onProgress?.({
+        totalMatches,
+        filesSearched: results.length,
+        duration: Date.now() - startTime,
+        status: signal?.aborted ? 'cancelled' : 'in-progress',
+      });
+    }
+
+    // 完成回调
+    onProgress?.({
+      totalMatches,
+      filesSearched: results.length,
+      duration: Date.now() - startTime,
+      status: 'completed',
+    });
+    return results;
+  }
+
+  private buildRegex(searchPattern: string, options: SearchOptions): RegExp {
+    let pattern = searchPattern;
+    if (!options.useRegex) {
+      pattern = pattern.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    }
+    if (options.wholeWord) {
+      pattern = `\\b${pattern}\\b`;
+    }
+    const flags = options.caseSensitive ? 'g' : 'gi';
+    return new RegExp(pattern, flags);
+  }
+
+  private async gatherFiles(rootPath: string, options: SearchOptions): Promise<string[]> {
+    // 使用 fast-glob 收集 includePattern
+    const entries = await fg(options.includePattern, {
+      cwd: rootPath,
+      ignore: options.excludePattern,
+      dot: true,
+      absolute: true,
+    });
+    let files = entries.map((p) => path.resolve(p));
+    // 处理 respectGitIgnore
+    if (options.respectGitIgnore) {
+      const ig = ignore();
+      const gitignorePath = path.join(rootPath, '.gitignore');
+      try {
+        const content = nodefs.readFileSync(gitignorePath, 'utf-8');
+        ig.add(content);
+        files = files.filter((f) => !ig.ignores(path.relative(rootPath, f)));
+      } catch {
+        // 忽略不存在情况
+      }
+    }
+    return files;
+  }
+
+  private async matchInFile(
+    filePath: string,
+    regex: RegExp,
+    options: SearchOptions
+  ): Promise<SearchMatch[]> {
+    const content = await this.fs.readFile(filePath);
+    const lines = content.split(/\r?\n/);
+    const matches: SearchMatch[] = [];
+    for (let i = 0; i < lines.length; i++) {
+      const line = lines[i];
+      let match: RegExpExecArray | null;
+      regex.lastIndex = 0;
+      while ((match = regex.exec(line)) !== null) {
+        const before = lines.slice(Math.max(0, i - options.contextLines.before), i);
+        const after = lines.slice(i + 1, i + 1 + options.contextLines.after);
+        matches.push({
+          line: i + 1,
+          column: match.index + 1,
+          text: line,
+          matchText: match[0],
+          beforeContext: before,
+          afterContext: after,
+        });
+        if (!options.useRegex) break; // 非正则只匹配一次
+      }
+    }
+    return matches;
+  }
+
+  /**
+   * 执行替换操作
+   * @param searchResults 搜索结果
+   * @param replaceText 替换文本
+   * @param _options 替换选项
+   */
+  public async replace(
+    searchResults: FileSearchResult[],
+    replaceText: string,
+    _options: ReplaceOptions
+  ): Promise<void> {
+    if (!this.lastSearchPattern || !this.lastSearchOptions) {
+      throw new Error('No previous search pattern/options');
+    }
+    // 清除旧备份
+    this.replaceBackup.clear();
+    const regex = this.buildRegex(this.lastSearchPattern, this.lastSearchOptions);
+    for (const result of searchResults) {
+      const filePath = result.filePath;
+      const content = await this.fs.readFile(filePath);
+      this.replaceBackup.set(filePath, content);
+      const newContent = content.replace(regex, replaceText);
+      await this.fs.writeFile(filePath, newContent);
+    }
+  }
+
+  /**
+   * 预览替换结果
+   * @param searchResults 搜索结果
+   * @param replaceText 替换文本
+   */
+  public async previewReplace(
+    searchResults: FileSearchResult[],
+    replaceText: string
+  ): Promise<FileSearchResult[]> {
+    // 预览：将 matchText 替换为 replaceText
+    return searchResults.map((result) => ({
+      filePath: result.filePath,
+      matches: result.matches.map((m) => ({ ...m, matchText: replaceText })),
+    }));
+  }
+
+  /**
+   * 撤销上一次替换操作
+   */
+  public async undoReplace(): Promise<void> {
+    for (const [filePath, content] of this.replaceBackup) {
+      await this.fs.writeFile(filePath, content);
+    }
+    this.replaceBackup.clear();
+  }
+}
+
+// 搜索历史管理
+export class SearchHistory {
+  private fs: FileSystem;
+  private historyPath: string;
+
+  constructor(fs: FileSystem, historyPath: string = '.searchHistory.json') {
+    this.fs = fs;
+    this.historyPath = historyPath;
+  }
+
+  /**
+   * 保存搜索查询
+   */
+  public saveQuery(searchPattern: string, options: SearchOptions): void {
+    let data: Array<{ searchPattern: string; options: SearchOptions }> = [];
+    try {
+      const content = nodefs.readFileSync(this.historyPath, 'utf-8');
+      data = JSON.parse(content) || [];
+    } catch {
+      data = [];
+    }
+    data.push({ searchPattern, options });
+    nodefs.writeFileSync(this.historyPath, JSON.stringify(data, null, 2), 'utf-8');
+  }
+
+  /**
+   * 获取搜索历史
+   */
+  public getHistory(): Array<{ searchPattern: string; options: SearchOptions }> {
+    try {
+      const content = nodefs.readFileSync(this.historyPath, 'utf-8');
+      return JSON.parse(content);
+    } catch {
+      return [];
+    }
+  }
+}
+
+// 文件系统接口
+export interface FileSystem {
+  readFile(path: string): Promise<string>;
+  writeFile(path: string, content: string): Promise<void>;
+  listFiles(pattern: string[]): Promise<string[]>;
+  watchFiles(callback: (path: string) => void): void;
+}
