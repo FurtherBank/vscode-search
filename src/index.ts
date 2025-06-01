@@ -95,7 +95,7 @@ export class SearchEngine {
     }
     if (options.wholeWord) {
       // 自定义全字匹配：单词字符包括字母、数字、下划线和连字符，使用零宽断言
-      const wc = '[A-Za-z0-9_\-]';
+      const wc = '[A-Za-z0-9_-]';
       pattern = `(?<!${wc})${pattern}(?!${wc})`;
     }
     const flags = options.caseSensitive ? 'g' : 'gi';
@@ -166,8 +166,10 @@ export class SearchEngine {
   public async replace(
     searchResults: FileSearchResult[],
     replaceText: string,
-    options: ReplaceOptions
+    _options: ReplaceOptions
   ): Promise<void> {
+    // 使用_options以避免未使用变量错误
+    _options;
     if (!this.lastSearchPattern || !this.lastSearchOptions) {
       throw new Error('No previous search pattern/options');
     }
@@ -217,8 +219,8 @@ export class SearchEngine {
   public async generateReport(results: FileSearchResult[], rootPath: string): Promise<string> {
     // 按文件路径排序
     results.sort((a, b) => {
-      const pa = path.relative(rootPath, a.filePath).replace(/\\/g, '/');
-      const pb = path.relative(rootPath, b.filePath).replace(/\\/g, '/');
+      const pa = path.relative(rootPath, a.filePath).replace(/\\/g, '/').toLowerCase();
+      const pb = path.relative(rootPath, b.filePath).replace(/\\/g, '/').toLowerCase();
       return pa.localeCompare(pb);
     });
 
@@ -233,7 +235,10 @@ export class SearchEngine {
       const content = await this.fs.readFile(r.filePath);
       const fullLines = content.split(/\r?\n/);
 
-      const lineNumWidth = (() => {
+      // 代码行左侧行号区格式：空格空格行号区冒号区
+      // 行号区：长度为所有匹配行的最大行号字符宽(如100~999为3位)，实际内容为行号右对齐+左补空格
+      // 冒号区：匹配到内容的行数为:空格，其它行为两个空格
+      const lineNumWidth = ((): number => {
         let maxLine = 0;
         for (const m of r.matches) {
           const endLine = m.line + m.afterContext.length;
@@ -273,7 +278,7 @@ export class SearchEngine {
       for (const { start, end } of blocks) {
         for (let ln = start; ln <= end; ln++) {
           const text = fullLines[ln - 1] || '';
-          const isMatchLine = r.matches.some(m => m.line === ln);
+          const isMatchLine = r.matches.some((m) => m.line === ln);
           const numStr = ln.toString().padStart(lineNumWidth, ' ');
           if (isMatchLine) {
             reportLines.push(`  ${numStr}: ${text}`);
@@ -286,6 +291,61 @@ export class SearchEngine {
     }
 
     return reportLines.join('\n').trimEnd();
+  }
+
+  /**
+   * 应用用户修改后的报告，并将更改写回对应文件
+   * @param reportText 修改后的报告文本
+   * @param rootPath 搜索根目录，用于解析相对文件路径
+   */
+  public async applyReportChange(reportText: string, rootPath: string): Promise<void> {
+    const lines = reportText.split(/\r?\n/);
+    const fileEdits: Record<string, Record<number, string>> = {};
+    let currentFile: string | null = null;
+    // 跳过报告头部 (例如 "X 个结果 - Y 文件" 和空行)
+    let i = 0;
+    if (lines[i] && lines[i].includes('个结果')) {
+      i += 1;
+    }
+    if (lines[i] === '') {
+      i += 1;
+    }
+    // 解析报告内容
+    while (i < lines.length) {
+      const line = lines[i];
+      if (!line) {
+        i++;
+        continue;
+      }
+      // 文件行: 无缩进，以冒号结尾
+      if (!line.startsWith('  ') && line.endsWith(':')) {
+        const rel = line.slice(0, -1);
+        currentFile = path.resolve(rootPath, rel);
+        fileEdits[currentFile] = {};
+        i++;
+        continue;
+      }
+      // 代码行: 两个空格缩进
+      const m = line.match(/^\s+(\d+)[\s:]+(.*)$/);
+      if (m && currentFile) {
+        const ln = parseInt(m[1], 10);
+        const text = m[2];
+        fileEdits[currentFile][ln] = text;
+      }
+      i++;
+    }
+    // 应用更改
+    for (const [filePath, edits] of Object.entries(fileEdits)) {
+      const content = await this.fs.readFile(filePath);
+      const fileLines = content.split(/\r?\n/);
+      for (const [lnStr, newText] of Object.entries(edits)) {
+        const ln = Number(lnStr) - 1;
+        if (fileLines[ln] !== newText) {
+          fileLines[ln] = newText;
+        }
+      }
+      await this.fs.writeFile(filePath, fileLines.join('\n'));
+    }
   }
 }
 
