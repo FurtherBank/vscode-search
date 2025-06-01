@@ -2,7 +2,7 @@
 
 src/components/base/ReactG6.tsx:
    4  
-   5: export const ReactG6 = (props: {
+   5: 哈哈哈哈哈
    6    data: GraphData | TreeGraphData | undefined;
    7    options: Omit<GraphOptions, 'container'>;
    8:   domAttributes?: React.DetailedHTMLProps<React.HTMLAttributes<HTMLDivElement>, HTMLDivElement>;

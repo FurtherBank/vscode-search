@@ -275,7 +275,12 @@ export class SearchEngine {
 
       blocks.sort((a, b) => a.start - b.start);
 
+      let lastEndLine = 0;
       for (const { start, end } of blocks) {
+        // 如果当前块的起始行与上一个块的结束行不连续，则添加空行分隔
+        if (lastEndLine !== 0 && start != lastEndLine + 1) {
+          reportLines.push('');
+        }
         for (let ln = start; ln <= end; ln++) {
           const text = fullLines[ln - 1] || '';
           const isMatchLine = r.matches.some((m) => m.line === ln);
@@ -286,8 +291,10 @@ export class SearchEngine {
             reportLines.push(`  ${numStr}  ${text}`);
           }
         }
-        reportLines.push('');
+        lastEndLine = end;
       }
+      // 添加空行分隔每个文件的结果
+      reportLines.push('');
     }
 
     return reportLines.join('\n').trimEnd();
