@@ -1,8 +1,8 @@
-import { SearchEngine, FileSystem } from '../index';
+import { SearchEngine, FileSystem } from '../index.js';
 import { promises as fsPromises } from 'fs';
 import * as os from 'os';
 import * as path from 'path';
-import { DiskFS } from './utils/diskfs';
+import { DiskFS } from './utils/diskfs.js';
 
 describe('SearchEngine applyReportChange', () => {
   let fs: FileSystem;

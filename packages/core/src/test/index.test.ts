@@ -1,7 +1,7 @@
-import { SearchEngine, FileSystem } from '../index';
-import { SearchOptions, ReplaceOptions, FileSearchResult } from '../types';
+import { SearchEngine, FileSystem } from '../index.js';
+import { SearchOptions, ReplaceOptions, FileSearchResult } from '../types.js';
 import { promises as fsPromises } from 'fs';
-import { DiskFS } from './utils/diskfs';
+import { DiskFS } from './utils/diskfs.js';
 import * as path from 'path';
 import * as os from 'os';
 

@@ -1,6 +1,6 @@
 import { promises as fsPromises } from 'fs';
 import fg from 'fast-glob';
-import type { FileSystem } from '../../index';
+import type { FileSystem } from '../../index.js';
 
 export class DiskFS implements FileSystem {
   root: string;

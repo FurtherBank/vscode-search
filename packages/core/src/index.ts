@@ -1,4 +1,10 @@
-import { SearchOptions, FileSearchResult, SearchStats, ReplaceOptions, SearchMatch } from './types';
+import {
+  SearchOptions,
+  FileSearchResult,
+  SearchStats,
+  ReplaceOptions,
+  SearchMatch,
+} from './types.js';
 import * as nodefs from 'fs';
 import fg from 'fast-glob';
 import ignore from 'ignore';
@@ -110,7 +116,7 @@ export class SearchEngine {
       dot: true,
       absolute: true,
     });
-    let files = entries.map((p) => path.resolve(p));
+    let files = entries.map((p: string) => path.resolve(p));
     // 处理 respectGitIgnore
     if (options.respectGitIgnore) {
       const ig = ignore();
@@ -118,7 +124,7 @@ export class SearchEngine {
       try {
         const content = nodefs.readFileSync(gitignorePath, 'utf-8');
         ig.add(content);
-        files = files.filter((f) => !ig.ignores(path.relative(rootPath, f)));
+        files = files.filter((f: string) => !ig.ignores(path.relative(rootPath, f)));
       } catch {
         // 忽略不存在情况
       }

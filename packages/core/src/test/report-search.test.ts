@@ -1,9 +1,9 @@
-import { SearchEngine, FileSystem } from '../index';
-import { SearchOptions } from '../types';
+import { SearchEngine, FileSystem } from '../index.js';
+import { SearchOptions } from '../types.js';
 import { promises as fsPromises } from 'fs';
 import * as os from 'os';
 import * as path from 'path';
-import { DiskFS } from './utils/diskfs';
+import { DiskFS } from './utils/diskfs.js';
 
 describe('SearchEngine generateReport', () => {
   let fs: FileSystem;
