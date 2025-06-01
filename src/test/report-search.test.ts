@@ -3,25 +3,7 @@ import { SearchOptions } from '../types';
 import { promises as fsPromises } from 'fs';
 import * as os from 'os';
 import * as path from 'path';
-import fg from 'fast-glob';
-
-// 磁盘文件系统实现
-class DiskFS implements FileSystem {
-  root: string;
-  constructor(root: string) {
-    this.root = root;
-  }
-  readFile(p: string) {
-    return fsPromises.readFile(p, 'utf8');
-  }
-  writeFile(p: string, c: string) {
-    return fsPromises.writeFile(p, c, 'utf8');
-  }
-  listFiles(p: string[]) {
-    return fg(p, { cwd: this.root, absolute: true });
-  }
-  watchFiles(): void {}
-}
+import { DiskFS } from './utils/diskfs';
 
 describe('SearchEngine generateReport', () => {
   let fs: FileSystem;

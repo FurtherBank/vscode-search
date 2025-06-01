@@ -1,28 +1,9 @@
 import { SearchEngine, FileSystem } from '../index';
 import { SearchOptions, ReplaceOptions, FileSearchResult } from '../types';
 import { promises as fsPromises } from 'fs';
-import fg from 'fast-glob';
+import { DiskFS } from './utils/diskfs';
 import * as path from 'path';
 import * as os from 'os';
-
-// 磁盘文件系统实现 FileSystem 接口，用于真实文件测试
-class DiskFS implements FileSystem {
-  root: string;
-  constructor(root: string) {
-    this.root = root;
-  }
-  async readFile(p: string): Promise<string> {
-    return fsPromises.readFile(p, 'utf8');
-  }
-  async writeFile(p: string, content: string): Promise<void> {
-    return fsPromises.writeFile(p, content, 'utf8');
-  }
-  async listFiles(patterns: string[]): Promise<string[]> {
-    const entries = await fg(patterns, { cwd: this.root, absolute: true });
-    return entries;
-  }
-  watchFiles(): void {}
-}
 
 describe('SearchEngine', () => {
   // 使用静态用例文件目录

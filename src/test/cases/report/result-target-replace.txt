@@ -3,46 +3,46 @@
 src/components/base/ReactG6.tsx:
    4  
    5: 哈哈哈哈哈
-   6    data: GraphData | TreeGraphData | undefined;
+   6    heheheh
    7    options: Omit<GraphOptions, 'container'>;
    8:   domAttributes?: React.DetailedHTMLProps<React.HTMLAttributes<HTMLDivElement>, HTMLDivElement>;
    9  }) => {
-  10:   const { data, options, domAttributes = {} } = props;
+  10:   const heheheh
   11    const { className = '', ...restDomAttributes } = domAttributes;
 
 src/components/end-graph/EndGraph.tsx:
    4  
    5: interface EndGraphProps {}
-   6  
+   6  fefefe
 
   84  
-  85: export const EndGraph = (props: EndGraphProps) => {
+  85: export cosdsfef eps: EndGraphProps) => {
   86    return <ReactG6 data={data} options={staticOptions} />;
 
 src/components/end-progress/EndProgress.tsx:
    4  
-   5: interface EndProgressProps {
+   5: interface Efefef
    6    endName: string;
 
   10  
-  11: export const EndProgress = (props: EndProgressProps) => {
-  12:   const { endName, stateName, progress } = props;
+  11: export co呵呵呵呵呵
+  12:   哈哈哈哈哈哈
   13  
 
 src/components/log-list/LogList.tsx:
    6  
    7: interface LogListProps {
-   8    endName: string;
+   8    e呵呵呵呵
 
   12  
   13: export const LogList = (props: any) => {
-  14    const { day, logs } = useSelector((state: StateWithHistory<EndPredictionState>) => {
+  14    const 是的是的是的是的是多少大萨达是
 
 src/components/MainPage.tsx:
   12  
   13: interface MainPageProps {}
   14  
-  15: interface MainPageBaseProps extends MainPageProps, EndPredictionState {}
+  15: interface 呵呵呵呵呵
   16  
   17: const MainPageBase = (props: MainPageBaseProps) => {
   18:   const { day } = props;
@@ -58,5 +58,5 @@ src/components/relation-graph/RelationGraph.tsx:
    5  
 
   34  
-  35: export const RelationGraph = (props: RelationGraphProps) => {
+  35: export const 哈哈哈哈哈哈
   36    return (
