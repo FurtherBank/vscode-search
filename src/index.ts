@@ -132,7 +132,6 @@ export class SearchEngine {
     options: SearchOptions
   ): Promise<SearchMatch[]> {
     const content = await this.fs.readFile(filePath);
-    console.log(filePath, content);
 
     const lines = content.split(/\r?\n/);
     const matches: SearchMatch[] = [];
@@ -140,7 +139,6 @@ export class SearchEngine {
       const line = lines[i];
       let match: RegExpExecArray | null;
       regex.lastIndex = 0;
-      console.log(regex, line);
 
       while ((match = regex.exec(line)) !== null) {
         const before = lines.slice(Math.max(0, i - options.contextLines.before), i);
@@ -209,6 +207,85 @@ export class SearchEngine {
       await this.fs.writeFile(filePath, content);
     }
     this.replaceBackup.clear();
+  }
+
+  /**
+   * 根据搜索结果生成搜索报告
+   * @param results 搜索结果
+   * @param rootPath 根目录，用于生成相对路径
+   */
+  public async generateReport(results: FileSearchResult[], rootPath: string): Promise<string> {
+    // 按文件路径排序
+    results.sort((a, b) => {
+      const pa = path.relative(rootPath, a.filePath).replace(/\\/g, '/');
+      const pb = path.relative(rootPath, b.filePath).replace(/\\/g, '/');
+      return pa.localeCompare(pb);
+    });
+
+    const totalMatches = results.reduce((sum, r) => sum + r.matches.length, 0);
+    const fileCount = results.length;
+    const reportLines: string[] = [];
+    reportLines.push(`${totalMatches} 个结果 - ${fileCount} 文件`, '');
+
+    for (const r of results) {
+      const relPath = path.relative(rootPath, r.filePath).replace(/\\/g, '/');
+      reportLines.push(`${relPath}:`);
+      const content = await this.fs.readFile(r.filePath);
+      const fullLines = content.split(/\r?\n/);
+
+      const lineNumWidth = (() => {
+        let maxLine = 0;
+        for (const m of r.matches) {
+          const endLine = m.line + m.afterContext.length;
+          if (endLine > maxLine) {
+            maxLine = endLine;
+          }
+        }
+        return maxLine.toString().length;
+      })();
+
+      type Block = { start: number; end: number };
+      const blocks: Block[] = [];
+
+      for (const m of r.matches) {
+        const before = m.beforeContext.length;
+        const after = m.afterContext.length;
+        const start = m.line - before;
+        const end = m.line + after;
+        let merged = false;
+
+        for (const b of blocks) {
+          if (!(end < b.start || start > b.end)) {
+            b.start = Math.min(b.start, start);
+            b.end = Math.max(b.end, end);
+            merged = true;
+            break;
+          }
+        }
+
+        if (!merged) {
+          blocks.push({ start, end });
+        }
+      }
+
+      blocks.sort((a, b) => a.start - b.start);
+
+      for (const { start, end } of blocks) {
+        for (let ln = start; ln <= end; ln++) {
+          const text = fullLines[ln - 1] || '';
+          const isMatchLine = r.matches.some(m => m.line === ln);
+          const numStr = ln.toString().padStart(lineNumWidth, ' ');
+          if (isMatchLine) {
+            reportLines.push(`  ${numStr}: ${text}`);
+          } else {
+            reportLines.push(`  ${numStr}  ${text}`);
+          }
+        }
+        reportLines.push('');
+      }
+    }
+
+    return reportLines.join('\n').trimEnd();
   }
 }
 

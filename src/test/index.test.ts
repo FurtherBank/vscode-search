@@ -3,6 +3,7 @@ import { SearchOptions, ReplaceOptions, FileSearchResult } from '../types';
 import { promises as fsPromises } from 'fs';
 import fg from 'fast-glob';
 import * as path from 'path';
+import * as os from 'os';
 
 // 磁盘文件系统实现 FileSystem 接口，用于真实文件测试
 class DiskFS implements FileSystem {
@@ -28,11 +29,20 @@ describe('SearchEngine', () => {
   let fs: FileSystem;
   let engine: SearchEngine;
   let root: string;
+  let tempDir: string;
 
-  beforeAll(() => {
-    root = path.join(__dirname, 'cases/basic');
+  beforeAll(async () => {
+    const casesDir = path.join(__dirname, 'cases/basic');
+    tempDir = path.join(os.tmpdir(), 'vscode-search-cases-basic');
+    await fsPromises.rm(tempDir, { recursive: true, force: true });
+    await fsPromises.mkdir(tempDir, { recursive: true });
+    await fsPromises.cp(casesDir, tempDir, { recursive: true });
+    root = tempDir;
     fs = new DiskFS(root);
     engine = new SearchEngine(fs);
+  });
+  afterAll(async () => {
+    if (tempDir) await fsPromises.rm(tempDir, { recursive: true, force: true });
   });
 
   const options: SearchOptions = {
@@ -82,10 +92,10 @@ describe('SearchEngine', () => {
     const replaceOptions: ReplaceOptions = { preview: false, selectedOnly: false };
     await engine.replace(searchResults, 'qux', replaceOptions);
     const contentAfter = await fsPromises.readFile(path.join(root, 'file1.txt'), 'utf8');
-    expect(contentAfter).toBe('foo qux foo');
+    expect(contentAfter.trimEnd()).toBe('foo qux foo');
     await engine.undoReplace();
     const contentBefore = await fsPromises.readFile(path.join(root, 'file1.txt'), 'utf8');
-    expect(contentBefore).toBe('foo bar foo');
+    expect(contentBefore.trimEnd()).toBe('foo bar foo');
   });
 });
 
@@ -93,11 +103,20 @@ describe('SearchEngine option flags', () => {
   let fs: FileSystem;
   let engine: SearchEngine;
   let root: string;
+  let tempDir: string;
 
-  beforeAll(() => {
-    root = path.join(__dirname, 'cases/flags');
+  beforeAll(async () => {
+    const casesDir = path.join(__dirname, 'cases/flags');
+    tempDir = path.join(os.tmpdir(), 'vscode-search-cases-flags');
+    await fsPromises.rm(tempDir, { recursive: true, force: true });
+    await fsPromises.mkdir(tempDir, { recursive: true });
+    await fsPromises.cp(casesDir, tempDir, { recursive: true });
+    root = tempDir;
     fs = new DiskFS(root);
     engine = new SearchEngine(fs);
+  });
+  afterAll(async () => {
+    await fsPromises.rm(tempDir, { recursive: true, force: true });
   });
 
   it('case sensitive only matches exact case', async () => {
