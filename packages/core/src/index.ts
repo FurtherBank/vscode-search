@@ -407,3 +407,4 @@ export interface FileSystem {
   listFiles(pattern: string[]): Promise<string[]>;
   watchFiles(callback: (path: string) => void): void;
 }
+
