@@ -94,7 +94,9 @@ export class SearchEngine {
       pattern = pattern.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
     }
     if (options.wholeWord) {
-      pattern = `\\b${pattern}\\b`;
+      // 自定义全字匹配：单词字符包括字母、数字、下划线和连字符，使用零宽断言
+      const wc = '[A-Za-z0-9_\-]';
+      pattern = `(?<!${wc})${pattern}(?!${wc})`;
     }
     const flags = options.caseSensitive ? 'g' : 'gi';
     return new RegExp(pattern, flags);
@@ -130,12 +132,16 @@ export class SearchEngine {
     options: SearchOptions
   ): Promise<SearchMatch[]> {
     const content = await this.fs.readFile(filePath);
+    console.log(filePath, content);
+
     const lines = content.split(/\r?\n/);
     const matches: SearchMatch[] = [];
     for (let i = 0; i < lines.length; i++) {
       const line = lines[i];
       let match: RegExpExecArray | null;
       regex.lastIndex = 0;
+      console.log(regex, line);
+
       while ((match = regex.exec(line)) !== null) {
         const before = lines.slice(Math.max(0, i - options.contextLines.before), i);
         const after = lines.slice(i + 1, i + 1 + options.contextLines.after);
@@ -147,7 +153,7 @@ export class SearchEngine {
           beforeContext: before,
           afterContext: after,
         });
-        if (!options.useRegex) break; // 非正则只匹配一次
+        // Removed single-match break for literal search to allow multiple matches per line
       }
     }
     return matches;
@@ -157,12 +163,12 @@ export class SearchEngine {
    * 执行替换操作
    * @param searchResults 搜索结果
    * @param replaceText 替换文本
-   * @param _options 替换选项
+   * @param options 替换选项
    */
   public async replace(
     searchResults: FileSearchResult[],
     replaceText: string,
-    _options: ReplaceOptions
+    options: ReplaceOptions
   ): Promise<void> {
     if (!this.lastSearchPattern || !this.lastSearchOptions) {
       throw new Error('No previous search pattern/options');

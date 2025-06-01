@@ -1,0 +1,209 @@
+import { SearchEngine, FileSystem } from '../index';
+import { SearchOptions, ReplaceOptions, FileSearchResult } from '../types';
+import { promises as fsPromises } from 'fs';
+import fg from 'fast-glob';
+import * as path from 'path';
+
+// 磁盘文件系统实现 FileSystem 接口，用于真实文件测试
+class DiskFS implements FileSystem {
+  root: string;
+  constructor(root: string) {
+    this.root = root;
+  }
+  async readFile(p: string): Promise<string> {
+    return fsPromises.readFile(p, 'utf8');
+  }
+  async writeFile(p: string, content: string): Promise<void> {
+    return fsPromises.writeFile(p, content, 'utf8');
+  }
+  async listFiles(patterns: string[]): Promise<string[]> {
+    const entries = await fg(patterns, { cwd: this.root, absolute: true });
+    return entries;
+  }
+  watchFiles(): void {}
+}
+
+describe('SearchEngine', () => {
+  // 使用静态用例文件目录
+  let fs: FileSystem;
+  let engine: SearchEngine;
+  let root: string;
+
+  beforeAll(() => {
+    root = path.join(__dirname, 'cases/basic');
+    fs = new DiskFS(root);
+    engine = new SearchEngine(fs);
+  });
+
+  const options: SearchOptions = {
+    caseSensitive: false,
+    wholeWord: false,
+    useRegex: false,
+    includePattern: ['*.txt'],
+    excludePattern: [],
+    maxResults: undefined,
+    contextLines: { before: 1, after: 1 },
+    searchInResults: false,
+    respectGitIgnore: false,
+  };
+
+  it('should find all matches', async () => {
+    const results = await engine.search('foo', root, options);
+    expect(results).toHaveLength(1);
+    const [res] = results;
+    expect(path.basename(res.filePath)).toBe('file1.txt');
+    expect(res.matches.length).toBe(2);
+    expect(res.matches[0].matchText).toBe('foo');
+    expect(res.matches[1].matchText).toBe('foo');
+  });
+
+  it('should preview replace correctly', async () => {
+    const searchResults: FileSearchResult[] = [
+      {
+        filePath: 'file1.txt',
+        matches: [
+          {
+            line: 1,
+            column: 1,
+            text: 'foo bar foo',
+            matchText: 'foo',
+            beforeContext: [],
+            afterContext: [],
+          },
+        ],
+      },
+    ];
+    const preview = await engine.previewReplace(searchResults, 'baz');
+    expect(preview[0].matches[0].matchText).toBe('baz');
+  });
+
+  it('should replace and undo correctly', async () => {
+    const searchResults = await engine.search('bar', root, options);
+    const replaceOptions: ReplaceOptions = { preview: false, selectedOnly: false };
+    await engine.replace(searchResults, 'qux', replaceOptions);
+    const contentAfter = await fsPromises.readFile(path.join(root, 'file1.txt'), 'utf8');
+    expect(contentAfter).toBe('foo qux foo');
+    await engine.undoReplace();
+    const contentBefore = await fsPromises.readFile(path.join(root, 'file1.txt'), 'utf8');
+    expect(contentBefore).toBe('foo bar foo');
+  });
+});
+
+describe('SearchEngine option flags', () => {
+  let fs: FileSystem;
+  let engine: SearchEngine;
+  let root: string;
+
+  beforeAll(() => {
+    root = path.join(__dirname, 'cases/flags');
+    fs = new DiskFS(root);
+    engine = new SearchEngine(fs);
+  });
+
+  it('case sensitive only matches exact case', async () => {
+    const opts: SearchOptions = {
+      caseSensitive: true,
+      wholeWord: false,
+      useRegex: false,
+      includePattern: ['case.txt'],
+      excludePattern: [],
+      maxResults: undefined,
+      contextLines: { before: 0, after: 0 },
+      searchInResults: false,
+      respectGitIgnore: false,
+    };
+    const res = await engine.search('foo', root, opts);
+    expect(res).toHaveLength(1);
+    expect(res[0].matches.length).toBe(1);
+  });
+
+  it('whole word only matches standalone words', async () => {
+    const opts: SearchOptions = {
+      caseSensitive: false,
+      wholeWord: true,
+      useRegex: false,
+      includePattern: ['word.txt'],
+      excludePattern: [],
+      maxResults: undefined,
+      contextLines: { before: 0, after: 0 },
+      searchInResults: false,
+      respectGitIgnore: false,
+    };
+    const res = await engine.search('foo', root, opts);
+    expect(res).toHaveLength(1);
+    expect(res[0].matches.length).toBe(2);
+  });
+
+  it('regex search finds pattern matches', async () => {
+    const opts: SearchOptions = {
+      caseSensitive: false,
+      wholeWord: false,
+      useRegex: true,
+      includePattern: ['regex.txt'],
+      excludePattern: [],
+      maxResults: undefined,
+      contextLines: { before: 0, after: 0 },
+      searchInResults: false,
+      respectGitIgnore: false,
+    };
+    const res = await engine.search('\\w+\\d', root, opts);
+    expect(res).toHaveLength(1);
+    expect(res[0].matches.length).toBe(3);
+  });
+
+  it('context lines shows surrounding lines', async () => {
+    const opts: SearchOptions = {
+      caseSensitive: false,
+      wholeWord: false,
+      useRegex: false,
+      includePattern: ['ctx.txt'],
+      excludePattern: [],
+      maxResults: undefined,
+      contextLines: { before: 1, after: 1 },
+      searchInResults: false,
+      respectGitIgnore: false,
+    };
+    const res = await engine.search('foo', root, opts);
+    expect(res).toHaveLength(1);
+    const match = res[0].matches[0];
+    expect(match.beforeContext).toEqual(['a']);
+    expect(match.afterContext).toEqual(['b']);
+  });
+
+  it('include and exclude patterns filter files', async () => {
+    const opts: SearchOptions = {
+      caseSensitive: false,
+      wholeWord: false,
+      useRegex: false,
+      includePattern: ['include/**/*.ts'],
+      excludePattern: ['**/exclude/**'],
+      maxResults: undefined,
+      contextLines: { before: 0, after: 0 },
+      searchInResults: false,
+      respectGitIgnore: false,
+    };
+    const res = await engine.search('export', root, opts);
+    expect(res).toHaveLength(1);
+    expect(path.basename(res[0].filePath)).toBe('a.ts');
+  });
+
+  it('respects gitignore configuration', async () => {
+    const optsIgnore: SearchOptions = {
+      caseSensitive: false,
+      wholeWord: false,
+      useRegex: false,
+      includePattern: ['*.txt'],
+      excludePattern: [],
+      maxResults: undefined,
+      contextLines: { before: 0, after: 0 },
+      searchInResults: false,
+      respectGitIgnore: true,
+    };
+    const resIgnore = await engine.search('ignore', root, optsIgnore);
+    expect(resIgnore).toHaveLength(0);
+
+    const optsNoIgnore: SearchOptions = { ...optsIgnore, respectGitIgnore: false };
+    const resNoIgnore = await engine.search('ignore', root, optsNoIgnore);
+    expect(resNoIgnore).toHaveLength(1);
+  });
+});
