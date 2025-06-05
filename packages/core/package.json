@@ -33,9 +33,7 @@
     "jest": "^29.7.0",
     "prettier": "^3.2.5",
     "ts-jest": "^29.1.2",
-    "typescript": "^5.3.3",
-    "@types/fast-glob": "^3.2.0",
-    "@types/ignore": "^5.0.0"
+    "typescript": "^5.3.3"
   },
   "dependencies": {
     "fast-glob": "^3.3.3",

@@ -1,6 +1,9 @@
 import { promises as fsPromises } from 'fs';
 import { SearchEngine, FileSystem, } from '@cpu-search/core';
 import { SearchOptions, ReplaceOptions } from '@cpu-search/core/types';
+import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
+import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
+import { z } from "zod";
 
 class NodeFileSystem implements FileSystem {
   async readFile(path: string): Promise<string> {
@@ -58,3 +61,78 @@ export async function applyReportChange(params: {
   const engine = new SearchEngine(fs);
   await engine.applyReportChange(params.reportText, params.rootPath);
 }
+
+// MCP server setup
+
+const server = new McpServer({
+  name: "cpu-search-mcp",
+  version: "1.0.0",
+  capabilities: {
+    resources: {},
+    tools: {},
+  },
+});
+
+// register generateReport tool
+server.tool(
+  "generateReport",
+  {
+    searchPattern: z.string().describe("Search pattern"),
+    rootPath: z.string().describe("Root path to search"),
+    options: z.any().optional().describe("Search options"),
+  },
+  async (
+    { searchPattern, rootPath, options = {} }: { searchPattern: string; rootPath: string; options?: SearchOptions },
+    _extra
+  ) => {
+    const report = await generateReport({ searchPattern, rootPath, options });
+    return { content: [{ type: "text", text: report }] };
+  }
+);
+server.tool(
+  "searchAndReplace",
+  {
+    searchPattern: z.string(),
+    replaceText: z.string(),
+    rootPath: z.string(),
+    options: z.any().optional(),
+    replaceOptions: z.any().optional(),
+  },
+  async (
+    { searchPattern, replaceText, rootPath, options = {}, replaceOptions = {} }: { searchPattern: string; replaceText: string; rootPath: string; options?: SearchOptions; replaceOptions?: ReplaceOptions },
+    _extra
+  ) => {
+    await searchAndReplace({ searchPattern, replaceText, rootPath, options, replaceOptions });
+    return { content: [{ type: "text", text: "Replace completed" }] };
+  }
+);
+server.tool(
+  "applyReportChange",
+  {
+    reportText: z.string().describe("Report content"),
+    rootPath: z.string().describe("Root path to apply changes"),
+  },
+  async (
+    { reportText, rootPath }: { reportText: string; rootPath: string },
+    _extra
+  ) => {
+    await applyReportChange({ reportText, rootPath });
+    return { content: [{ type: "text", text: "Applied report changes" }] };
+  }
+);
+    await applyReportChange({ reportText, rootPath });
+    return { content: [{ type: "text", text: "Applied report changes" }] };
+  }
+);
+
+// run the MCP server over stdio
+async function main() {
+  const transport = new StdioServerTransport();
+  await server.connect(transport);
+  console.error("CPU Search MCP server running on stdio");
+}
+
+main().catch((error) => {
+  console.error("Fatal MCP server error:", error);
+  process.exit(1);
+});

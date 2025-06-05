@@ -1,17 +1,17 @@
 // 搜索选项配置
 export interface SearchOptions {
   caseSensitive: boolean;        // 区分大小写
-  wholeWord: boolean;            // 全字匹配
-  useRegex: boolean;             // 使用正则表达式
-  includePattern: string[];      // 包含的文件模式
-  excludePattern: string[];      // 排除的文件模式
+  wholeWord?: boolean;            // 全字匹配
+  useRegex?: boolean;             // 使用正则表达式
+  includePattern?: string[];      // 包含的文件模式
+  excludePattern?: string[];      // 排除的文件模式
   maxResults?: number;           // 最大结果数
-  contextLines: {                // 上下文行数
+  contextLines?: {                // 上下文行数
     before: number;
     after: number;
   };
-  searchInResults: boolean;      // 在结果中搜索
-  respectGitIgnore: boolean;     // 是否遵循.gitignore
+  searchInResults?: boolean;      // 在结果中搜索
+  respectGitIgnore?: boolean;     // 是否遵循.gitignore
 }
 
 // 搜索结果中的匹配项

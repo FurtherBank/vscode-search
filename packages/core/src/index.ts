@@ -110,7 +110,7 @@ export class SearchEngine {
 
   private async gatherFiles(rootPath: string, options: SearchOptions): Promise<string[]> {
     // 使用 fast-glob 收集 includePattern
-    const entries = await fg(options.includePattern, {
+    const entries = await fg(options.includePattern ?? [], {
       cwd: rootPath,
       ignore: options.excludePattern,
       dot: true,
@@ -147,8 +147,8 @@ export class SearchEngine {
       regex.lastIndex = 0;
 
       while ((match = regex.exec(line)) !== null) {
-        const before = lines.slice(Math.max(0, i - options.contextLines.before), i);
-        const after = lines.slice(i + 1, i + 1 + options.contextLines.after);
+        const before = lines.slice(Math.max(0, i - (options.contextLines?.before ?? 0)), i);
+        const after = lines.slice(i + 1, i + 1 + (options.contextLines?.after ?? 0));
         matches.push({
           line: i + 1,
           column: match.index + 1,
@@ -407,4 +407,3 @@ export interface FileSystem {
   listFiles(pattern: string[]): Promise<string[]>;
   watchFiles(callback: (path: string) => void): void;
 }
-
