@@ -1,5 +1,5 @@
 import { SearchEngine, FileSystem } from '../index.js';
-import { SearchOptions, ReplaceOptions, FileSearchResult } from '../types.js';
+import { SearchOptions, FileSearchResult } from '../types.js';
 import { promises as fsPromises } from 'fs';
 import { DiskFS } from './utils/diskfs.js';
 import * as path from 'path';
@@ -70,8 +70,7 @@ describe('SearchEngine', () => {
 
   it('should replace and undo correctly', async () => {
     const searchResults = await engine.search('bar', root, options);
-    const replaceOptions: ReplaceOptions = { preview: false, selectedOnly: false };
-    await engine.replace(searchResults, 'qux', replaceOptions);
+    await engine.replace(searchResults, 'qux');
     const contentAfter = await fsPromises.readFile(path.join(root, 'file1.txt'), 'utf8');
     expect(contentAfter.trimEnd()).toBe('foo qux foo');
     await engine.undoReplace();

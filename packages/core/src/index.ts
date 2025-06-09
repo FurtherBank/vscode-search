@@ -1,10 +1,4 @@
-import {
-  SearchOptions,
-  FileSearchResult,
-  SearchStats,
-  ReplaceOptions,
-  SearchMatch,
-} from './types.js';
+import { SearchOptions, FileSearchResult, SearchStats, SearchMatch } from './types.js';
 import * as nodefs from 'fs';
 import fg from 'fast-glob';
 import ignore from 'ignore';
@@ -63,6 +57,7 @@ export class SearchEngine {
     const files = await this.gatherFiles(rootPath, options);
     const results: FileSearchResult[] = [];
     let totalMatches = 0;
+    console.error(`Searching in ${files.length} files...`);
 
     for (const file of files) {
       if (signal?.aborted) break;
@@ -110,7 +105,7 @@ export class SearchEngine {
 
   private async gatherFiles(rootPath: string, options: SearchOptions): Promise<string[]> {
     // 使用 fast-glob 收集 includePattern
-    const entries = await fg(options.includePattern ?? [], {
+    const entries = await fg(options.includePattern ?? ['**/*'], {
       cwd: rootPath,
       ignore: options.excludePattern,
       dot: true,
@@ -169,13 +164,7 @@ export class SearchEngine {
    * @param replaceText 替换文本
    * @param options 替换选项
    */
-  public async replace(
-    searchResults: FileSearchResult[],
-    replaceText: string,
-    _options: ReplaceOptions
-  ): Promise<void> {
-    // 使用_options以避免未使用变量错误
-    _options;
+  public async replace(searchResults: FileSearchResult[], replaceText: string): Promise<void> {
     if (!this.lastSearchPattern || !this.lastSearchOptions) {
       throw new Error('No previous search pattern/options');
     }

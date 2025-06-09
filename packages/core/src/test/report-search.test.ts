@@ -26,7 +26,7 @@ describe('SearchEngine generateReport', () => {
     await fsPromises.rm(tempDir, { recursive: true, force: true });
   });
 
-  it('should generate report matching expected result', async () => {
+  it('matching result', async () => {
     const options: SearchOptions = {
       caseSensitive: false,
       wholeWord: false,
@@ -41,6 +41,24 @@ describe('SearchEngine generateReport', () => {
     const results = await engine.search('props', root, options);
     const report = await engine.generateReport(results, root);
     const expected = await fsPromises.readFile(path.join(root, 'result.txt'), 'utf8');
+    expect(report).toBe(expected.trimEnd());
+  });
+
+  it('matching result(wholeWord)', async () => {
+    const options: SearchOptions = {
+      caseSensitive: false,
+      wholeWord: true,
+      useRegex: false,
+      includePattern: ['src/**/*.{ts,tsx}'],
+      excludePattern: [],
+      maxResults: undefined,
+      contextLines: { before: 1, after: 1 },
+      searchInResults: false,
+      respectGitIgnore: false,
+    };
+    const results = await engine.search('props', root, options);
+    const report = await engine.generateReport(results, root);
+    const expected = await fsPromises.readFile(path.join(root, 'result-wholeword.txt'), 'utf8');
     expect(report).toBe(expected.trimEnd());
   });
 });

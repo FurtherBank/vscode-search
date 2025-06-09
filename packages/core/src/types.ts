@@ -1,6 +1,6 @@
 // 搜索选项配置
 export interface SearchOptions {
-  caseSensitive: boolean;        // 区分大小写
+  caseSensitive?: boolean;        // 区分大小写
   wholeWord?: boolean;            // 全字匹配
   useRegex?: boolean;             // 使用正则表达式
   includePattern?: string[];      // 包含的文件模式
@@ -37,9 +37,3 @@ export interface SearchStats {
   duration: number;              // 搜索耗时(ms)
   status: 'in-progress' | 'completed' | 'cancelled'; // 搜索状态
 }
-
-// 替换选项
-export interface ReplaceOptions {
-  preview: boolean;              // 是否预览
-  selectedOnly: boolean;         // 是否仅替换选中项
-} 

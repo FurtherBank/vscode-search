@@ -1,0 +1,41 @@
+10 个结果 - 6 文件
+
+src/components/base/ReactG6.tsx:
+   4  
+   5: export const ReactG6 = (props: {
+   6    data: GraphData | TreeGraphData | undefined;
+
+   9  }) => {
+  10:   const { data, options, domAttributes = {} } = props;
+  11    const { className = '', ...restDomAttributes } = domAttributes;
+
+src/components/end-graph/EndGraph.tsx:
+  84  
+  85: export const EndGraph = (props: EndGraphProps) => {
+  86    return <ReactG6 data={data} options={staticOptions} />;
+
+src/components/end-progress/EndProgress.tsx:
+  10  
+  11: export const EndProgress = (props: EndProgressProps) => {
+  12:   const { endName, stateName, progress } = props;
+  13  
+
+src/components/log-list/LogList.tsx:
+  12  
+  13: export const LogList = (props: any) => {
+  14    const { day, logs } = useSelector((state: StateWithHistory<EndPredictionState>) => {
+
+src/components/MainPage.tsx:
+  16  
+  17: const MainPageBase = (props: MainPageBaseProps) => {
+  18:   const { day } = props;
+  19  
+
+  72  
+  73: export const MainPage = connect((state: StateWithHistory<EndPredictionState>, props: MainPageProps) => {
+  74    const { present } = state;
+
+src/components/relation-graph/RelationGraph.tsx:
+  34  
+  35: export const RelationGraph = (props: RelationGraphProps) => {
+  36    return (
