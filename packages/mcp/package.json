@@ -1,12 +1,14 @@
 {
   "name": "@cpu-search/mcp",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "description": "Model Context Protocol server for CPU-based code search and replace",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
   "type": "module",
   "bin": {
-    "cpu-search-mcp": "./dist/index.js"
+    "cpu-search-mcp": "./dist/index.js",
+    "@cpu-search/mcp": "./dist/index.js",
+    "mcp": "./dist/index.js"
   },
   "files": [
     "dist",

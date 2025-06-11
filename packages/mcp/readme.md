@@ -11,7 +11,7 @@
   "command": "npx",
   "args": [
     "-y",
-    "@cpu-search/vscode-search",
+    "@cpu-search/mcp",
     "--root",
     "${workspaceFolder}"
   ],
