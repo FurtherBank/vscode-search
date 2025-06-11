@@ -19,7 +19,7 @@
     "README.md"
   ],
   "scripts": {
-    "build": "tsc --build",
+    "build": "tsc -b --incremental false",
     "dev": "tsc --watch",
     "test": "jest",
     "lint": "eslint src/**/*.ts",
