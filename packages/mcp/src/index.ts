@@ -65,7 +65,7 @@ export async function searchAndReplace(params: {
   searchPattern: string;
   replaceText: string;
   options: SearchOptions;
-}): Promise<void> {
+}): Promise<{ filesCount: number; matchesCount: number }> {
   const fs = new NodeFileSystem();
   const engine = new SearchEngine(fs);
   const results = await engine.search(
@@ -74,6 +74,12 @@ export async function searchAndReplace(params: {
     params.options
   );
   await engine.replace(results, params.replaceText);
+
+  // 返回替换涉及的文件数和匹配项总数
+  const filesCount = results.length;
+  const matchesCount = results.reduce((sum, r) => sum + r.matches.length, 0);
+
+  return { filesCount, matchesCount };
 }
 
 /**
@@ -130,9 +136,17 @@ cpu-search-mcp工具是一个复刻vscode左侧搜索替换的代码重构工具
 // register generateSearchReport tool
 server.tool(
   'generateSearchReport',
+  '生成搜索报告工具，根据指定的搜索模式在项目中查找匹配项并生成预览报告，可用于在执行替换前预览搜索结果',
   {
-    searchPattern: z.string().describe('Search pattern'),
-    options: z.any().optional().describe('Search options'),
+    searchPattern: z
+      .string()
+      .describe('要搜索的文本模式，可以是普通文本或正则表达式（当 useRegex 为 true 时）'),
+    options: z
+      .any()
+      .optional()
+      .describe(
+        '搜索选项，包含：caseSensitive(区分大小写)、wholeWord(全字匹配)、useRegex(正则表达式)、include(包含文件)、exclude(排除文件)、contextLines(附带上下文行数)'
+      ),
   },
   async (
     { searchPattern, options = {} }: { searchPattern: string; options?: SearchOptions },
@@ -145,12 +159,24 @@ server.tool(
     return { content: [{ type: 'text', text: report }] };
   }
 );
+
+// 现在的 agent ai 编辑，还不会看 ts 内部的定义
 server.tool(
   'searchAndReplace',
+  '搜索替换工具，根据指定的搜索模式在项目中查找匹配项并替换为指定文本，直接执行替换操作并返回替换的文件数和匹配数',
   {
-    searchPattern: z.string(),
-    replaceText: z.string(),
-    options: z.any().optional(),
+    searchPattern: z
+      .string()
+      .describe('要搜索的文本模式，可以是普通文本或正则表达式（当 useRegex 为 true 时）'),
+    replaceText: z
+      .string()
+      .describe('用于替换匹配内容的文本，可以引用正则表达式捕获组（当 useRegex 为 true 时）'),
+    options: z
+      .any()
+      .optional()
+      .describe(
+        '搜索选项，包含：caseSensitive(区分大小写)、wholeWord(全字匹配)、useRegex(正则表达式)、include(包含文件)、exclude(排除文件)'
+      ),
   },
   async (
     {
@@ -160,18 +186,28 @@ server.tool(
     }: { searchPattern: string; replaceText: string; options?: SearchOptions },
     _extra
   ) => {
-    await searchAndReplace({
+    const result = await searchAndReplace({
       searchPattern,
       replaceText,
       options,
     });
-    return { content: [{ type: 'text', text: 'Replace completed' }] };
+    return {
+      content: [
+        {
+          type: 'text',
+          text: `Replace completed: ${result.filesCount} files, ${result.matchesCount} matches`,
+        },
+      ],
+    };
   }
 );
 server.tool(
   'applyReportChange',
+  '应用报告修改工具，根据修改后的搜索报告内容，将相应的修改应用到实际文件中，用于对搜索结果对应内容进行精细化、自定义的修改',
   {
-    reportText: z.string().describe('Report content'),
+    reportText: z
+      .string()
+      .describe('搜索报告内容，通常是由 generateSearchReport 工具生成后进行修改的报告文本'),
   },
   async ({ reportText }: { reportText: string; rootPath?: string }, _extra) => {
     await applyReportChange({ reportText });
