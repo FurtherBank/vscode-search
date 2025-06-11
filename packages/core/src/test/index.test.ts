@@ -91,6 +91,7 @@ describe('SearchEngine option flags', () => {
     await fsPromises.rm(tempDir, { recursive: true, force: true });
     await fsPromises.mkdir(tempDir, { recursive: true });
     await fsPromises.cp(casesDir, tempDir, { recursive: true });
+
     root = tempDir;
     fs = new DiskFS(root);
     engine = new SearchEngine(fs);
@@ -187,6 +188,17 @@ describe('SearchEngine option flags', () => {
   });
 
   it('respects gitignore configuration', async () => {
+    // ci 环境中被 ignored 文件不存在，需要加上
+    const ignoredPath = path.join(root, 'ignored.txt');
+    const fileExists = await fsPromises
+      .access(ignoredPath)
+      .then(() => true)
+      .catch(() => false);
+
+    if (!fileExists) {
+      await fsPromises.writeFile(ignoredPath, 'ignore this file\n');
+    }
+
     const optsIgnore: SearchOptions = {
       caseSensitive: false,
       wholeWord: false,
