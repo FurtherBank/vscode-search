@@ -91,6 +91,9 @@ importers:
       zod:
         specifier: ^3.25.51
         version: 3.25.51
+      zod-to-json-schema:
+        specifier: ^3.24.5
+        version: 3.24.5(zod@3.25.51)
     devDependencies:
       '@types/jest':
         specifier: ^29.5.12
