@@ -7,7 +7,7 @@
   ],
   "type": "module",
   "scripts": {
-    "build": "pnpm --filter @cpu-search/core build && pnpm --filter @cpu-search/mcp build",
+    "build": "pnpm -r --sequential build",
     "dev": "pnpm -r dev",
     "test": "pnpm -r test",
     "lint": "pnpm -r lint",
