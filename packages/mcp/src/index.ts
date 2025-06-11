@@ -101,7 +101,7 @@ cpu-search-mcp工具是一个复刻vscode左侧搜索替换的代码重构工具
 - include: 包含的文件类型（如 ['*.ts', '*.tsx']）
 - exclude: 排除的文件类型（如 ['*.test.ts', '*.test.tsx']）
 - contextLines: 搜索结果报告附带的上下文行数（如 { before: 1, after: 1 }）
-2. 可以直接修改上述报告的内容，然后传入到 applyReportChange({ reportText: "generateSearchReport 报告修改后的内容" }) 工具，即可在文件系统应用对应修改；
+2. 可以直接修改上述报告的内容，然后传入到 applyReportChange({ reportText: "generateSearchReport 报告修改后的内容" }) 工具，即可diff修改内容，并在文件系统应用对应修改；
 3. 也可以使用 searchAndReplace({searchPattern, replaceText, options }) 工具直接执行搜索替换操作，实现重构；
 
 示例：重构 TypeScript 源代码，将 urlString 参数名改为 url，搜索 options 参数设置如下：
