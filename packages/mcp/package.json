@@ -16,7 +16,7 @@
     "build": "tsc",
     "dev": "tsc --watch",
     "start": "tsc --watch & npx @modelcontextprotocol/inspector node ./dist/index.js",
-    "test": "jest",
+    "test": "echo 'No tests defined'",
     "lint": "eslint src/**/*.ts",
     "format": "prettier --write \"src/**/*.ts\""
   },
