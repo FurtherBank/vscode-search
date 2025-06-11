@@ -1,8 +1,49 @@
-# VS Code 查找和替换功能产品需求文档
+# 仿 vscode-search 的代码重构 mcp 工具
 
 ## 使用
 
+### 在 cline 中使用
 
+增加 mcp 工具设置：
+
+```json
+"cpu-vscode-search": {
+  "command": "npx",
+  "args": [
+    "-y",
+    "@cpu-search/vscode-search",
+    "--root",
+    "${workspaceFolder}"
+  ],
+  "disabled": false,
+  "autoApprove": []
+}
+```
+
+### MCP 工具使用示例
+
+```javascript
+// 生成搜索报告
+generateSearchReport({
+  searchPattern: 'someText',
+  // rootPath参数可省略，会使用命令行--root参数值
+  options: { include: ['*.ts', '*.tsx'], exclude: ['node_modules/**'] },
+});
+
+// 搜索并替换
+searchAndReplace({
+  searchPattern: 'oldText',
+  replaceText: 'newText',
+  // rootPath参数可省略，会使用命令行--root参数值
+  options: { caseSensitive: true },
+});
+
+// 应用报告修改
+applyReportChange({
+  reportText: 'generateSearchReport 报告修改后的内容',
+  // rootPath参数可省略，会使用命令行--root参数值
+});
+```
 
 ## 开发
 

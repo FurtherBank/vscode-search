@@ -1,9 +1,17 @@
 {
   "name": "@cpu-search/mcp",
   "version": "1.0.0",
+  "description": "Model Context Protocol server for CPU-based code search and replace",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
   "type": "module",
+  "bin": {
+    "cpu-search-mcp": "./dist/index.js"
+  },
+  "files": [
+    "dist",
+    "README.md"
+  ],
   "scripts": {
     "build": "tsc",
     "dev": "tsc --watch",
@@ -13,7 +21,7 @@
     "format": "prettier --write \"src/**/*.ts\""
   },
   "dependencies": {
-    "@cpu-search/core": "workspace:*",
+    "@cpu-search/core": "^0.0.1",
     "@modelcontextprotocol/sdk": "^1.12.1",
     "zod": "^3.25.51"
   },
@@ -27,5 +35,18 @@
     "prettier": "^3.2.5",
     "ts-jest": "^29.1.2",
     "typescript": "^5.3.3"
-  }
+  },
+  "author": "furtherbank",
+  "license": "ISC",
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "keywords": [
+    "search",
+    "replace",
+    "mcp",
+    "code-search",
+    "model-context-protocol",
+    "vscode"
+  ]
 }

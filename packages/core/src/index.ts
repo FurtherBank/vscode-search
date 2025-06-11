@@ -104,10 +104,10 @@ export class SearchEngine {
   }
 
   private async gatherFiles(rootPath: string, options: SearchOptions): Promise<string[]> {
-    // 使用 fast-glob 收集 includePattern
-    const entries = await fg(options.includePattern ?? ['**/*'], {
+    // 使用 fast-glob 收集 include
+    const entries = await fg(options.include ?? ['**/*'], {
       cwd: rootPath,
-      ignore: options.excludePattern,
+      ignore: options.exclude,
       dot: true,
       absolute: true,
     });
