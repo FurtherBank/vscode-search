@@ -36,4 +36,4 @@ jobs:
       - name: Publish packages
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
-        run: pnpm publish -r --no-git-checks --ignore-workspace-root-check
+        run: pnpm publish -r --no-git-checks --ignore-workspace-root
